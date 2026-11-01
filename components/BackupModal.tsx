@@ -38,12 +38,15 @@ export function BackupModal({ visible, mode, onClose }: {
     setBusy(true);
     try {
       if (mode === 'export') {
-        await exportToServer(name.trim(), password, contacts.map(({ firstName, lastName, mobilePhone, notes }) => ({ firstName, lastName, mobilePhone, notes })));
-        Alert.alert('Export complete', 'Your contacts were saved to the server.');
+        const result = await exportToServer(name.trim(), password, contacts.map(({ firstName, lastName, mobilePhone, notes }) => ({ firstName, lastName, mobilePhone, notes })));
+        Alert.alert(
+          result.Created ? 'Backup created' : 'Backup overwritten',
+          `${result.savingName}: ${result.count} contacts ${result.Created ? 'saved' : 'updated'} on the server.`
+        );
       } else {
         const result = await importFromServer(name.trim(), password);
         await replaceContacts(result.contacts);
-        Alert.alert('Import complete', `${result.contacts.length} contacts imported.`);
+        Alert.alert('Import complete', `${result.contacts.length} contacts imported from "${result.savingName}".`);
       }
       setName(''); setPassword(''); onClose();
     } catch (error) {
@@ -66,9 +69,9 @@ export function BackupModal({ visible, mode, onClose }: {
               <Pressable onPress={onClose} style={[styles.close, { backgroundColor: c.surfaceSecondary }]}><Ionicons name="close" size={21} color={c.text} /></Pressable>
             </View>
             <Text style={[styles.label, { color: c.text }]}>Saving name</Text>
-            <TextInput value={name} onChangeText={setName} placeholder="e.g. MyContacts" placeholderTextColor={c.muted} autoCapitalize="none" style={[styles.input, { backgroundColor: c.input, color: c.text, borderColor: c.border }]} />
+            <TextInput value={name} onChangeText={setName} placeholder="e.g. MyContacts" placeholderTextColor={c.muted} autoCapitalize="none" maxLength={50} style={[styles.input, { backgroundColor: c.input, color: c.text, borderColor: c.border }]} />
             <Text style={[styles.label, { color: c.text, marginTop: 15 }]}>Password</Text>
-            <TextInput value={password} onChangeText={setPassword} placeholder="Enter backup password" placeholderTextColor={c.muted} secureTextEntry style={[styles.input, { backgroundColor: c.input, color: c.text, borderColor: c.border }]} />
+            <TextInput value={password} onChangeText={setPassword} placeholder="Enter backup password" placeholderTextColor={c.muted} secureTextEntry maxLength={64} autoCapitalize="none" style={[styles.input, { backgroundColor: c.input, color: c.text, borderColor: c.border }]} />
             {mode === 'import' && <View style={[styles.warning, { backgroundColor: isDark ? '#3A2925' : '#FFF4E8' }]}><Ionicons name="warning-outline" size={18} color="#C47A2C" /><Text style={{ color: isDark ? '#F1BD83' : '#92551C', flex: 1, fontSize: 12, lineHeight: 18 }}>Import replaces the current contact list on this device.</Text></View>}
             <Pressable disabled={busy} onPress={submit} style={[styles.submit, { backgroundColor: c.primary, opacity: busy ? 0.65 : 1 }]}>
               {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{mode === 'import' ? 'Import contacts' : 'Export contacts'}</Text>}
